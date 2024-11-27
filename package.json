@@ -41,6 +41,8 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
-    "ignore": "^6.0.2"
+    "ignore": "^6.0.2",
+    "postcss": "^8.4.49",
+    "postcss-selector-parser": "^7.0.0"
   }
 }
