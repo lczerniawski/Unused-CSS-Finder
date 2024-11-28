@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as constants from './Constants';
+import * as constants from './constants';
 
 export class UnusedCssCodeActionProvider implements vscode.CodeActionProvider {
     provideCodeActions(document: vscode.TextDocument, range: vscode.Range | vscode.Selection, context: vscode.CodeActionContext, token: vscode.CancellationToken): vscode.ProviderResult<(vscode.CodeAction | vscode.Command)[]> {

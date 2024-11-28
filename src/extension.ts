@@ -2,7 +2,7 @@ import path from 'path';
 import * as vscode from 'vscode';
 import ignore from 'ignore';
 import { existsSync, readFileSync } from 'fs';
-import * as constants from './Constants';
+import * as constants from './constants';
 import { UnusedCssCodeActionProvider } from './unused-css-code-action.provider';
 import { TextDecoder } from 'util';
 import * as postcss from 'postcss';
@@ -127,6 +127,10 @@ function extractClassNames(cssContent: string): Set<string> {
 
 async function checkClassUsageInFiles(potentialFiles: vscode.Uri[], textDecoder: TextDecoder, classNames: Set<string>, usedClassNames: Set<string>) {
 	for (const potentialFile of potentialFiles) {
+		if(classNames.size === usedClassNames.size) {
+			break;
+		}
+
 		const potentialFileContent = await vscode.workspace.fs.readFile(potentialFile);
 		const potentialFileContentString = textDecoder.decode(potentialFileContent);
 
