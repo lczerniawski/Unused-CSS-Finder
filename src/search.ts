@@ -9,7 +9,7 @@ import selectorParser from 'postcss-selector-parser';
 
 export async function findUnusedClassesAndMark(diagnosticCollection: vscode.DiagnosticCollection) {
 	const unusedCssClasses = await findUnusedClassesInCurrentFile();
-	if(unusedCssClasses) {
+	if (unusedCssClasses) {
 		markUnusedClasses(unusedCssClasses, diagnosticCollection);
 	}
 }
@@ -17,10 +17,10 @@ export async function findUnusedClassesAndMark(diagnosticCollection: vscode.Diag
 async function findUnusedClassesInCurrentFile(): Promise<Array<string> | null> {
 	const textDecoder = new TextDecoder("utf-8");
 	const workspaceMainPaths = vscode.workspace.workspaceFolders;
-	if(!workspaceMainPaths) {
+	if (!workspaceMainPaths) {
 		return null;
 	}
-	
+
 	const currentCssDocument = vscode.window.activeTextEditor?.document;
 	const cssExtensions = ['.css', '.scss', '.less', '.sass'];
 	if (!currentCssDocument || !cssExtensions.some(ext => currentCssDocument.fileName.endsWith(ext))) {
@@ -28,13 +28,13 @@ async function findUnusedClassesInCurrentFile(): Promise<Array<string> | null> {
 	}
 
 	const currentFileWorkspace = workspaceMainPaths?.find(x => currentCssDocument.uri.fsPath.includes(x.uri.fsPath));
-	if(!currentFileWorkspace) {
+	if (!currentFileWorkspace) {
 		return null;
 	}
 
 	const ig = ignore();
 	const gitignorePath = path.join(currentFileWorkspace.uri.fsPath, '.gitignore');
-	if(existsSync(gitignorePath)) {
+	if (existsSync(gitignorePath)) {
 		const gitignoreContent = readFileSync(gitignorePath, 'utf8');
 		ig.add(gitignoreContent);
 	}
@@ -52,19 +52,19 @@ async function findUnusedClassesInCurrentFile(): Promise<Array<string> | null> {
 	const allPotentialFilesThatUseCss = await vscode.workspace.findFiles("**/*.{html,jsx,tsx,js,ts}", "**/node_modules/**");
 	const currentCssPath = path.dirname(currentCssDocument.uri.fsPath);
 
-	const potentialFilesDeepInTree = allPotentialFilesThatUseCss.filter(x => { 
+	const potentialFilesDeepInTree = allPotentialFilesThatUseCss.filter(x => {
 		return x.fsPath.includes(currentCssPath) && !ig.ignores(path.relative(currentFileWorkspace.uri.fsPath, x.fsPath));
 	});
 	await checkClassUsageInFiles(potentialFilesDeepInTree, textDecoder, classNames, usedClassNames);
-	
+
 	// ! if no files are found near the .css file we go up the tree 
-	if(potentialFilesDeepInTree.length === 0) {
+	if (potentialFilesDeepInTree.length === 0) {
 		const relativePath = path.relative(currentFileWorkspace.uri.fsPath, currentCssDocument.uri.fsPath);
 		const relativePathSplitted = relativePath.split(path.sep);
 
-		for(let i = relativePathSplitted.length - 3; i >= 0; i--) {
+		for (let i = relativePathSplitted.length - 3; i >= 0; i--) {
 			const potentialPath = path.join(currentFileWorkspace.uri.fsPath, ...relativePathSplitted.slice(0, i + 1));
-			const potentialFiles = allPotentialFilesThatUseCss.filter(x => { 
+			const potentialFiles = allPotentialFilesThatUseCss.filter(x => {
 				const fileDir = path.dirname(x.fsPath);
 				return fileDir === potentialPath && !ig.ignores(path.relative(currentFileWorkspace.uri.fsPath, x.fsPath));
 			});
@@ -84,23 +84,23 @@ async function findUnusedClassesInCurrentFile(): Promise<Array<string> | null> {
 }
 
 function extractClassNames(cssContent: string): Set<string> {
-    const classNames = new Set<string>();
+	const classNames = new Set<string>();
 
-    const root = postcss.parse(cssContent);
-    root.walkRules(rule => {
-        selectorParser(selectors => {
-            selectors.walkClasses(classNode => {
-                classNames.add(classNode.value);
-            });
-        }).processSync(rule.selector);
-    });
+	const root = postcss.parse(cssContent);
+	root.walkRules(rule => {
+		selectorParser(selectors => {
+			selectors.walkClasses(classNode => {
+				classNames.add(classNode.value);
+			});
+		}).processSync(rule.selector);
+	});
 
-    return classNames;
+	return classNames;
 }
 
 async function checkClassUsageInFiles(potentialFiles: vscode.Uri[], textDecoder: TextDecoder, classNames: Set<string>, usedClassNames: Set<string>) {
 	for (const potentialFile of potentialFiles) {
-		if(classNames.size === usedClassNames.size) {
+		if (classNames.size === usedClassNames.size) {
 			break;
 		}
 
@@ -118,25 +118,45 @@ async function checkClassUsageInFiles(potentialFiles: vscode.Uri[], textDecoder:
 
 function markUnusedClasses(unusedCssClasses: Array<string>, diagnosticCollection: vscode.DiagnosticCollection) {
 	const document = vscode.window.activeTextEditor?.document;
-	if(!document) {
+	if (!document) {
 		return;
 	}
 
 	const diagnostics: vscode.Diagnostic[] = [];
+	const css = document.getText();
+	const root = postcss.parse(css);
 
-	for(const className of unusedCssClasses) {
-		const regex = new RegExp(`\\.${className}\\s*{\\s*.*\\s*}`, 'g');
-		let match;
-		while((match = regex.exec(document.getText())) !== null) {
-			const startPos = document.positionAt(match.index);
-			const endPos = document.positionAt(match.index + match[0].length);
+	root.walkRules(rule => {
+		const selector = rule.selector;
+		let hasUnusedClass = false;
+
+		selectorParser(selectors => {
+			selectors.walkClasses(classNode => {
+				const className = classNode.value;
+				if (unusedCssClasses.includes(className)) {
+					hasUnusedClass = true;
+				}
+			});
+		}).processSync(selector);
+
+		if (hasUnusedClass) {
+			const ruleStartOffset = document.offsetAt(
+				new vscode.Position(rule.source!.start!.line - 1, rule.source!.start!.column - 1)
+			);
+			const ruleEndOffset = document.offsetAt(
+				new vscode.Position(rule.source!.end!.line - 1, rule.source!.end!.column - 1)
+			);
+
+			const startPos = document.positionAt(ruleStartOffset);
+			const endPos = document.positionAt(ruleEndOffset);
+
 			const range = new vscode.Range(startPos, endPos);
 			const diagnostic = new vscode.Diagnostic(range, 'Potentially unused class', vscode.DiagnosticSeverity.Warning);
 			diagnostic.source = "css";
 			diagnostic.code = constants.DiagnosticCode;
 			diagnostics.push(diagnostic);
 		}
-	}
+	});
 
 	diagnosticCollection.set(document.uri, diagnostics);
 }
