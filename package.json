@@ -1,8 +1,29 @@
 {
   "name": "unused-css-finder",
   "displayName": "Unused CSS Finder",
-  "description": "TODO",
-  "version": "0.0.1",
+  "description": "Unused CSS Finder is a Visual Studio Code extension that helps you identify and remove unused CSS classes from your project. It scans your files, finds unused CSS, and marks it as a problem directly in the editor.",
+  "version": "1.0.0",
+  "publisher": "lczerniawski",
+  "author": {
+    "name": "Łukasz Czerniawski",
+    "email": "lczerniawski@icloud.com",
+    "url": "https://lczerniawski.github.io/"
+  },
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#4083DB",
+    "theme": "dark"
+  },
+  "license": "SEE LICENSE IN LICENSE.txt",
+  "homepage": "https://github.com/lczerniawski/Unused-CSS-Finder/blob/main/README.md",
+  "bugs": {
+    "url": "https://github.com/lczerniawski/Unused-CSS-Finder/issues",
+    "email": "l.czerniawski@icloud.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lczerniawski/Unused-CSS-Finder"
+  },
   "engines": {
     "vscode": "^1.95.0"
   },

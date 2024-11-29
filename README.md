@@ -1,71 +1,44 @@
-# unused-css README
+# Unused CSS Finder
 
-This is the README for your extension "unused-css". After writing up a brief description, we recommend including the following sections.
+Unused CSS Finder is a Visual Studio Code extension that helps you identify and remove unused CSS classes from your project. It scans your files, finds unused CSS, and marks it as a problem directly in the editor.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- **Automatic Scanning**: Searches for files `.html`, `.jsx`, `.tsx`, `js`, `ts` that could use the currently opened CSS file.
+- **Problem Marking**: Identifies unused CSS classes and marks them as problems in VS Code.
+- **Supports Various File Types**: Works with `.css`, `.scss`, `.less`, and `.sass` files.
 
-For example if there is an image subfolder under your extension project workspace:
+## Screenshots
 
-\!\[feature X\]\(images/feature-x.png\)
+![Screenshot of example unused class](images/unused-class-problem.png)
+![Screenshot of example unused class with quick fix](images/unused-class-problem-quick-fix.png)
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+## How It Works
 
-## Requirements
+1. **Scanning for Relevant Files**: The extension looks for files that are in the same folder as currently opened CSS file.
+2. **Fallback to Parent Directories**: If no files are found, it searches parent directories up the tree.
+2. **Analyzing Usage**: Parses these files to determine which CSS classes are unused.
+3. **Marking Unused CSS**: Highlights unused CSS in the editor and lists them in the Problems panel.
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+## Installation
 
-## Extension Settings
+1. Open Visual Studio Code.
+2. Go to the Extensions view by clicking on the Extensions icon in the Activity Bar.
+3. Search for `Unused CSS Finder`.
+4. Click **Install** to add the extension.
+5. Reload VS Code to activate the extension.
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+## Usage
 
-For example:
+- Open your CSS file in VS Code.
+- The extension automatically scans for unused CSS selectors in the currently opened file.
+- Unused selectors are highlighted in your CSS file.
+- Review and remove unused CSS to optimize your project.
 
-This extension contributes the following settings:
+## Contributing
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+Contributions are welcome! Please submit issues and pull requests on the [GitHub repository](https://github.com/lczerniawski/Unused-CSS-Finder).
 
-## Known Issues
+## License
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+See [LICENSE.txt](LICENSE.txt) for license information.
