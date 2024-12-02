@@ -108,7 +108,7 @@ async function checkClassUsageInFiles(potentialFiles: vscode.Uri[], textDecoder:
 		const potentialFileContentString = textDecoder.decode(potentialFileContent);
 
 		for (const className of classNames) {
-			const classUsageRegex = new RegExp(`(className|class).*".*(\\b${className}\\b).*"`, 'g');
+			const classUsageRegex = new RegExp(`(className|class).*("|').*(\\b${className}\\b).*("|')`, 'g');
 			if (classUsageRegex.test(potentialFileContentString)) {
 				usedClassNames.add(className);
 			}
