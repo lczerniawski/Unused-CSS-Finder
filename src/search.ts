@@ -49,7 +49,7 @@ async function findUnusedClassesInCurrentFile(): Promise<Array<string> | null> {
 	const classNames = extractClassNames(fileContentString);
 	let usedClassNames = new Set<string>();
 
-	const allPotentialFilesThatUseCss = await vscode.workspace.findFiles("**/*.{html,jsx,tsx,js,ts}", "**/node_modules/**");
+	const allPotentialFilesThatUseCss = await vscode.workspace.findFiles("**/*.{html,jsx,tsx,js,ts,php}", "**/node_modules/**");
 	const currentCssPath = path.dirname(currentCssDocument.uri.fsPath);
 
 	const potentialFilesDeepInTree = allPotentialFilesThatUseCss.filter(x => {
