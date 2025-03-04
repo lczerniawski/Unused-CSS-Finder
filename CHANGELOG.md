@@ -1,5 +1,8 @@
 # Change Log
 
+## [1.1.2] - 2025-03-04
+- Fix vulnerable packages
+
 ## [1.1.1] - 2025-01-23
 - Mention PHP file extension in readme
 
