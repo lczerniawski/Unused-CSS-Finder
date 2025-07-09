@@ -7,6 +7,7 @@ Unused CSS Finder is a Visual Studio Code extension that helps you identify and 
 - **Automatic Scanning**: Searches for files `.html`, `.jsx`, `.tsx`, `js`, `ts`, `php` that could use the currently opened CSS file.
 - **Problem Marking**: Identifies unused CSS classes and marks them as problems in VS Code.
 - **Supports Various File Types**: Works with `.css`, `.scss`, `.less`, and `.sass` files.
+- **Configurable Fallback Search**: Option to enable/disable fallback search mechanism when no files are found near the CSS file.
 
 ## Screenshots
 
@@ -19,6 +20,27 @@ Unused CSS Finder is a Visual Studio Code extension that helps you identify and 
 2. **Fallback to Parent Directories**: If no files are found, it searches parent directories up the tree.
 2. **Analyzing Usage**: Parses these files to determine which CSS classes are unused.
 3. **Marking Unused CSS**: Highlights unused CSS in the editor and lists them in the Problems panel.
+
+## Configuration
+
+The extension provides the following configuration options:
+
+### `unusedCssFinder.enableFallbackSearch`
+- **Type**: `boolean`
+- **Default**: `true`
+- **Description**: Enable fallback search mechanism when no files are found near the CSS file. When enabled, the extension will search parent directories if no relevant files are found in the same directory as the CSS file.
+
+To configure this setting:
+1. Open VS Code settings (Cmd/Ctrl + ,)
+2. Search for "Unused CSS Finder"
+3. Toggle the "Enable Fallback Search" option
+
+Alternatively, add this to your `settings.json`:
+```json
+{
+  "unusedCssFinder.enableFallbackSearch": false
+}
+```
 
 ## Installation
 

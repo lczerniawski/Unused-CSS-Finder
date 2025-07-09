@@ -57,8 +57,11 @@ async function findUnusedClassesInCurrentFile(): Promise<Array<string> | null> {
 	});
 	await checkClassUsageInFiles(potentialFilesDeepInTree, textDecoder, classNames, usedClassNames);
 
-	// ! if no files are found near the .css file we go up the tree 
-	if (potentialFilesDeepInTree.length === 0) {
+	const config = vscode.workspace.getConfiguration('unusedCssFinder');
+	const enableFallbackSearch = config.get<boolean>('enableFallbackSearch', true);
+
+	// ! if no files are found near the .css file we go up the tree (and fallback is enabled in settings)
+	if (potentialFilesDeepInTree.length === 0 && enableFallbackSearch) {
 		const relativePath = path.relative(currentFileWorkspace.uri.fsPath, currentCssDocument.uri.fsPath);
 		const relativePathSplitted = relativePath.split(path.sep);
 

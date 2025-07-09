@@ -1,5 +1,8 @@
 # Change Log
 
+## [1.2.0] - 2025-07-09
+- Add possibility to disable fallback search mechanism in options
+
 ## [1.1.2] - 2025-03-04
 - Fix vulnerable packages
 
