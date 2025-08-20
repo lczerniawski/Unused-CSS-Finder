@@ -111,8 +111,10 @@ async function checkClassUsageInFiles(potentialFiles: vscode.Uri[], textDecoder:
 		const potentialFileContentString = textDecoder.decode(potentialFileContent);
 
 		for (const className of classNames) {
-			const classUsageRegex = new RegExp(`(className|class).*("|').*(\\b${className}\\b).*("|')`, 'g');
-			if (classUsageRegex.test(potentialFileContentString)) {
+			const classAttrRegex = new RegExp(`(className|class|ngClass).*("|').*(\\b${className}\\b).*("|')`, 'g');
+			const classBindingRegex = new RegExp(`\\[class\\.${className}\\]\\s*=`, 'g');
+
+			if (classAttrRegex.test(potentialFileContentString) || classBindingRegex.test(potentialFileContentString)) {
 				usedClassNames.add(className);
 			}
 		}
