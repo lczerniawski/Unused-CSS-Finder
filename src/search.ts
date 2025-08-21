@@ -86,7 +86,7 @@ async function findUnusedClassesInCurrentFile(): Promise<Array<string> | null> {
 	return unusedCssClasses;
 }
 
-function extractClassNames(cssContent: string): Set<string> {
+export function extractClassNames(cssContent: string): Set<string> {
 	const classNames = new Set<string>();
 
 	const root = postcss.parse(cssContent);
@@ -101,7 +101,7 @@ function extractClassNames(cssContent: string): Set<string> {
 	return classNames;
 }
 
-async function checkClassUsageInFiles(potentialFiles: vscode.Uri[], textDecoder: TextDecoder, classNames: Set<string>, usedClassNames: Set<string>) {
+export async function checkClassUsageInFiles(potentialFiles: vscode.Uri[], textDecoder: TextDecoder, classNames: Set<string>, usedClassNames: Set<string>) {
 	for (const potentialFile of potentialFiles) {
 		if (classNames.size === usedClassNames.size) {
 			break;
@@ -111,8 +111,10 @@ async function checkClassUsageInFiles(potentialFiles: vscode.Uri[], textDecoder:
 		const potentialFileContentString = textDecoder.decode(potentialFileContent);
 
 		for (const className of classNames) {
-			const classUsageRegex = new RegExp(`(className|class).*("|').*(\\b${className}\\b).*("|')`, 'g');
-			if (classUsageRegex.test(potentialFileContentString)) {
+			const classAttrRegex = new RegExp(`(className|class|ngClass).*("|').*(\\b${className}\\b).*("|')`, 'g');
+			const classBindingRegex = new RegExp(`\\[class\\.${className}\\]\\s*=`, 'g');
+
+			if (classAttrRegex.test(potentialFileContentString) || classBindingRegex.test(potentialFileContentString)) {
 				usedClassNames.add(className);
 			}
 		}
