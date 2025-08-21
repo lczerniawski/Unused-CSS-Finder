@@ -86,7 +86,7 @@ async function findUnusedClassesInCurrentFile(): Promise<Array<string> | null> {
 	return unusedCssClasses;
 }
 
-function extractClassNames(cssContent: string): Set<string> {
+export function extractClassNames(cssContent: string): Set<string> {
 	const classNames = new Set<string>();
 
 	const root = postcss.parse(cssContent);
@@ -101,7 +101,7 @@ function extractClassNames(cssContent: string): Set<string> {
 	return classNames;
 }
 
-async function checkClassUsageInFiles(potentialFiles: vscode.Uri[], textDecoder: TextDecoder, classNames: Set<string>, usedClassNames: Set<string>) {
+export async function checkClassUsageInFiles(potentialFiles: vscode.Uri[], textDecoder: TextDecoder, classNames: Set<string>, usedClassNames: Set<string>) {
 	for (const potentialFile of potentialFiles) {
 		if (classNames.size === usedClassNames.size) {
 			break;
