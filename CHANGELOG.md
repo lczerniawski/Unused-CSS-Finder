@@ -1,5 +1,8 @@
 # Change Log
 
+## [1.3.0] - 2025-08-12
+- Add support for Angular [ngClass] and [class.x] syntax
+
 ## [1.2.0] - 2025-07-09
 - Add possibility to disable fallback search mechanism in options
 
