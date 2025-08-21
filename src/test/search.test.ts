@@ -18,7 +18,7 @@ suite('Search utilities', () => {
 
 	test('checkClassUsageInFiles detects class in class attribute and ngClass', async () => {
 		const textDecoder = new TextDecoder('utf-8');
-		const classNames = new Set<string>(['foo', 'ngtest']);
+		const classNames = new Set<string>(['foo', 'ngtest', 'missing']);
 		const usedClassNames = new Set<string>();
 
 		const fileUri = vscode.Uri.file('/fake/path/file1.html');
@@ -41,6 +41,7 @@ suite('Search utilities', () => {
 			await checkClassUsageInFiles([fileUri], textDecoder, classNames, usedClassNames);
 			assert.ok(usedClassNames.has('foo'));
 			assert.ok(usedClassNames.has('ngtest'));
+			assert.ok(!usedClassNames.has('missign'));
 		} finally {
 			Object.defineProperty(vscode.workspace, 'fs', { value: originalFs, configurable: true });
 		}
