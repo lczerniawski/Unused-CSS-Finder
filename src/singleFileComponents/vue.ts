@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { parse as parseVue } from '@vue/compiler-sfc';
 
+// TODO: need to allow scanning for classes used inside a v-html attribute 
+
 /**
  * Checks if a string content represents a Vue Single File Component (SFC).
  * It does this by attempting to parse the content and checking for the presence
