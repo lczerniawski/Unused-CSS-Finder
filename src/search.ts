@@ -9,7 +9,7 @@ import selectorParser from 'postcss-selector-parser';
 import * as sfc from './singleFileComponents/sfc';
 import FileExtension from './enums/fileExtensions';
 import FilesWithCss from './enums/fileWithCss';
-import { StandardExtractorService } from './services/standard-extractor.service';
+import { GenericExtractorService } from './services/generic-extractor.service';
 import { VueExtractorService } from './services/vue-extractor.service';
 import { FoundCSS } from './models';
 
@@ -20,7 +20,7 @@ export async function findUnusedClassesAndMark(diagnosticCollection: vscode.Diag
 	}
 }
 async function findUnusedClassesInCurrentFile(): Promise< FoundCSS[] | null> {
-	var standardExtractor = new StandardExtractorService();
+	var standardExtractor = new GenericExtractorService();
 	var vueExtractor = new VueExtractorService();
 
 	const textDecoder = new TextDecoder("utf-8");

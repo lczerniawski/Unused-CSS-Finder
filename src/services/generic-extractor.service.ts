@@ -5,7 +5,7 @@ import * as postcss from 'postcss';
 import selectorParser from 'postcss-selector-parser';
 import { FoundCSS } from '../models';
 
-export class StandardExtractorService implements Extractor {
+export class GenericExtractorService implements Extractor {
     textDecoder = new TextDecoder("utf-8");
 
     extractClassNames(fileContent: string): Set<FoundCSS> {
