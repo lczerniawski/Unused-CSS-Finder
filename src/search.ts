@@ -4,14 +4,11 @@ import ignore from 'ignore';
 import { existsSync, readFileSync } from 'fs';
 import * as constants from './constants';
 import { TextDecoder } from 'util';
-import * as postcss from 'postcss';
-import selectorParser from 'postcss-selector-parser';
-import * as sfc from './singleFileComponents/sfc';
-import FileExtension from './enums/fileExtensions';
 import FilesWithCss from './enums/fileWithCss';
 import { GenericExtractorService } from './services/generic-extractor.service';
 import { VueExtractorService } from './services/vue-extractor.service';
 import { FoundCSS } from './models';
+import { Extractor } from './services/extractor.interface';
 
 export async function findUnusedClassesAndMark(diagnosticCollection: vscode.DiagnosticCollection) {
 	const unusedCssClasses = await findUnusedClassesInCurrentFile();
@@ -20,24 +17,26 @@ export async function findUnusedClassesAndMark(diagnosticCollection: vscode.Diag
 	}
 }
 async function findUnusedClassesInCurrentFile(): Promise< FoundCSS[] | null> {
-	var standardExtractor = new GenericExtractorService();
-	var vueExtractor = new VueExtractorService();
+	const standardExtractor = new GenericExtractorService();
+	const vueExtractor = new VueExtractorService();
+	const extractors: Extractor[] = [standardExtractor, vueExtractor];
 
-	const textDecoder = new TextDecoder("utf-8");
 	const workspaceMainPaths = vscode.workspace.workspaceFolders;
 	if (!workspaceMainPaths) {
 		return null;
 	}
 
-	// TODO This should be part of the method for service that will tell if this file is worth checking
-	const currentCssDocument = vscode.window.activeTextEditor?.document;
-	const cssExtensions = [FileExtension.css, FileExtension.scss, FileExtension.less, FileExtension.sass];
-	const fileExtensions = [FileExtension.vue];
-	if (!currentCssDocument || ![...cssExtensions, ...fileExtensions].some(ext => currentCssDocument.fileName.endsWith(ext))) {
+	const currentDocument = vscode.window.activeTextEditor?.document;
+	if (!currentDocument) {
 		return null;
 	}
 
-	const currentFileWorkspace = workspaceMainPaths?.find(x => currentCssDocument.uri.fsPath.includes(x.uri.fsPath));
+	const extractorToUse = extractors.find(ext => ext.isFileOfInterest(currentDocument.fileName));
+	if(!extractorToUse) {
+		return null;
+	}	
+
+	const currentFileWorkspace = workspaceMainPaths?.find(x => currentDocument.uri.fsPath.includes(x.uri.fsPath));
 	if (!currentFileWorkspace) {
 		return null;
 	}
@@ -49,24 +48,25 @@ async function findUnusedClassesInCurrentFile(): Promise< FoundCSS[] | null> {
 		ig.add(gitignoreContent);
 	}
 
-	if (ig.ignores(path.relative(currentFileWorkspace.uri.fsPath, currentCssDocument.uri.fsPath))) {
+	if (ig.ignores(path.relative(currentFileWorkspace.uri.fsPath, currentDocument.uri.fsPath))) {
 		return null;
 	}
 
-	const fileContent = await vscode.workspace.fs.readFile(currentCssDocument.uri);
+	const fileContent = await vscode.workspace.fs.readFile(currentDocument.uri);
+	const textDecoder = new TextDecoder("utf-8");
 	const fileContentString = textDecoder.decode(fileContent);
 
-	const classNames = sfc.isSFC(fileContentString) ? vueExtractor.extractClassNames(fileContentString) : standardExtractor.extractClassNames(fileContentString);
+	const classNames = extractorToUse.extractClassNames(fileContentString); 
 	let usedClassNames = new Set<string>();
 
 	const filesWithCss = Object.values(FilesWithCss);
 	const allPotentialFilesThatUseCss = await vscode.workspace.findFiles(`**/*.{${filesWithCss.join(',')}}`, "**/node_modules/**");
-	const currentCssPath = path.dirname(currentCssDocument.uri.fsPath);
+	const currentCssPath = path.dirname(currentDocument.uri.fsPath);
 
 	const potentialFilesCloseToCurrentFile = allPotentialFilesThatUseCss.filter(x => {
 		return x.fsPath.includes(currentCssPath) && !ig.ignores(path.relative(currentFileWorkspace.uri.fsPath, x.fsPath));
 	});
-	const usedClasses = sfc.isSFC(fileContentString) ? await vueExtractor.getUsedClassesInFiles(potentialFilesCloseToCurrentFile, classNames) : await standardExtractor.getUsedClassesInFiles(potentialFilesCloseToCurrentFile, classNames);
+	const usedClasses = await extractorToUse.getUsedClassesInFiles(potentialFilesCloseToCurrentFile, classNames);
 	usedClasses.forEach(className => usedClassNames.add(className));
 
 	const config = vscode.workspace.getConfiguration('unusedCssFinder');
@@ -74,7 +74,7 @@ async function findUnusedClassesInCurrentFile(): Promise< FoundCSS[] | null> {
 
 	// ! if no files are found near the .css file we go up the tree (and fallback is enabled in settings)
 	if (potentialFilesCloseToCurrentFile.length === 0 && enableFallbackSearch) {
-		const relativePath = path.relative(currentFileWorkspace.uri.fsPath, currentCssDocument.uri.fsPath);
+		const relativePath = path.relative(currentFileWorkspace.uri.fsPath, currentDocument.uri.fsPath);
 		const relativePathSplitted = relativePath.split(path.sep);
 
 		for (let i = relativePathSplitted.length - 3; i >= 0; i--) {
@@ -83,7 +83,7 @@ async function findUnusedClassesInCurrentFile(): Promise< FoundCSS[] | null> {
 				const fileDir = path.dirname(x.fsPath);
 				return fileDir === potentialPath && !ig.ignores(path.relative(currentFileWorkspace.uri.fsPath, x.fsPath));
 			});
-			const usedClasses = sfc.isSFC(fileContentString) ? await vueExtractor.getUsedClassesInFiles(potentialFiles, classNames) : await standardExtractor.getUsedClassesInFiles(potentialFiles, classNames);
+			const usedClasses = await extractorToUse.getUsedClassesInFiles(potentialFiles, classNames);
 			usedClasses.forEach(className => usedClassNames.add(className));
 		}
 
@@ -92,7 +92,7 @@ async function findUnusedClassesInCurrentFile(): Promise< FoundCSS[] | null> {
 			const fileDir = path.dirname(x.fsPath);
 			return fileDir === currentFileWorkspace.uri.fsPath && !ig.ignores(path.relative(currentFileWorkspace.uri.fsPath, x.fsPath));
 		});
-		const usedClasses = sfc.isSFC(fileContentString) ? await vueExtractor.getUsedClassesInFiles(potentialFilesInRoot, classNames) : await standardExtractor.getUsedClassesInFiles(potentialFilesInRoot, classNames);
+		const usedClasses = await extractorToUse.getUsedClassesInFiles(potentialFilesInRoot, classNames);
 		usedClasses.forEach(className => usedClassNames.add(className));
 	}
 

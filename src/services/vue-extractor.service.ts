@@ -5,9 +5,14 @@ import * as postcss from 'postcss';
 import selectorParser from 'postcss-selector-parser';
 import { FoundCSS } from '../models';
 import * as vue from '../singleFileComponents/vue';
+import FileExtension from '../enums/fileExtensions';
 
 export class VueExtractorService implements Extractor {
 	textDecoder = new TextDecoder("utf-8");
+
+    isFileOfInterest(fileName: string): boolean {
+        return [...FileExtension.vue].some(ext => fileName.endsWith(ext));
+    }
 
     extractClassNames(fileContent: string): Set<FoundCSS> {
         const classNames = new Set<FoundCSS>();

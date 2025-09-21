@@ -4,9 +4,14 @@ import { Extractor } from "./extractor.interface";
 import * as postcss from 'postcss';
 import selectorParser from 'postcss-selector-parser';
 import { FoundCSS } from '../models';
+import FileExtension from '../enums/fileExtensions';
 
 export class GenericExtractorService implements Extractor {
     textDecoder = new TextDecoder("utf-8");
+
+    isFileOfInterest(fileName: string): boolean {
+        return [FileExtension.css, FileExtension.scss, FileExtension.less, FileExtension.sass].some(ext => fileName.endsWith(ext));
+    }
 
     extractClassNames(fileContent: string): Set<FoundCSS> {
         const classNames = new Set<FoundCSS>();
