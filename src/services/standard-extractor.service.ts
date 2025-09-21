@@ -6,7 +6,7 @@ import selectorParser from 'postcss-selector-parser';
 import { FoundCSS } from '../models';
 
 export class StandardExtractorService implements Extractor {
-	textDecoder = new TextDecoder("utf-8");
+    textDecoder = new TextDecoder("utf-8");
 
     extractClassNames(fileContent: string): Set<FoundCSS> {
         const classNames = new Set<FoundCSS>();
@@ -40,15 +40,41 @@ export class StandardExtractorService implements Extractor {
             const potentialFileContentString = this.textDecoder.decode(potentialFileContent);
 
             for (const className of classNames) {
-                const classAttrRegex = new RegExp(`(className|class|ngClass).*("|').*(\\b${className.name}\\b).*("|')`, 'g');
-                const classBindingRegex = new RegExp(`\\[class\\.${className.name}\\]\\s*=`, 'g'); // TODO move it to angular specific parser
-
-                if (classAttrRegex.test(potentialFileContentString) || classBindingRegex.test(potentialFileContentString)) {
+                if (this.isClassUsed(className.name, potentialFileContentString)) {
                     usedClassNames.add(className.name);
                 }
             }
         }
 
         return usedClassNames;
+    }
+
+    private escapeRegExp(input: string): string {
+        return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    private isClassUsed(className: string, content: string): boolean {
+        const name = this.escapeRegExp(className);
+        const contentWithoutComments = content.replace(/<!--[\s\S]*?-->/g, '');
+
+        const classAttrCapture = /(class(Name)?)\s*=\s*(['"])(.*?)\3/gs;
+        let m;
+        while ((m = classAttrCapture.exec(contentWithoutComments)) !== null) {
+            const attrValue = m[4];
+            const tokenRe = new RegExp(`(^|[^\\w-])${name}($|[^\\w-])`);
+            if (tokenRe.test(attrValue)) { return true; }
+        }
+
+        const classBindingRegex = new RegExp(`\\[class\\.${name}\\]\\s*=`, 'g');
+        if (classBindingRegex.test(contentWithoutComments)) { return true; }
+
+        const ngClassRegex = /\[ngClass\]\s*=\s*(['"])(.*?)\1/gs;
+        while ((m = ngClassRegex.exec(contentWithoutComments)) !== null) {
+            const ngClassValue = m[2];
+            const tokenRe = new RegExp(`(^|[^\\w-])${name}($|[^\\w-])`);
+            if (tokenRe.test(ngClassValue)) { return true; }
+        }
+
+        return false;
     }
 }

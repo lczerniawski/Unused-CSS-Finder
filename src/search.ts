@@ -13,14 +13,12 @@ import { StandardExtractorService } from './services/standard-extractor.service'
 import { VueExtractorService } from './services/vue-extractor.service';
 import { FoundCSS } from './models';
 
-
 export async function findUnusedClassesAndMark(diagnosticCollection: vscode.DiagnosticCollection) {
 	const unusedCssClasses = await findUnusedClassesInCurrentFile();
 	if (unusedCssClasses) {
 		markUnusedClasses(unusedCssClasses, diagnosticCollection);
 	}
 }
-
 async function findUnusedClassesInCurrentFile(): Promise< FoundCSS[] | null> {
 	var standardExtractor = new StandardExtractorService();
 	var vueExtractor = new VueExtractorService();
