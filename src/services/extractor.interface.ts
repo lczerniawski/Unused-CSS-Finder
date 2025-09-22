@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { FoundCSS } from '../models';
+import { DetectedCSSClass } from '../models';
 
-export interface Extractor {
+export interface IExtractor {
     isFileOfInterest(fileName: string): boolean
-    extractClassNames(fileContent: string): Set<FoundCSS>
-    getUsedClassesInFiles(files: vscode.Uri[], classNames: Set<FoundCSS>): Promise<Set<string>>
+    extractClassNames(fileContent: string): Set<DetectedCSSClass>
+    getUsedClassesInFiles(files: vscode.Uri[], classNames: Set<DetectedCSSClass>): Promise<Set<string>>
 }

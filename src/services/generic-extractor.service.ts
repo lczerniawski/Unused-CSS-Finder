@@ -1,20 +1,20 @@
 import * as vscode from 'vscode';
 import { Uri } from "vscode";
-import { Extractor } from "./extractor.interface";
+import { IExtractor } from "./extractor.interface";
 import * as postcss from 'postcss';
 import selectorParser from 'postcss-selector-parser';
-import { FoundCSS } from '../models';
-import FileExtension from '../enums/fileExtensions';
+import { DetectedCSSClass } from '../models';
+import { FileExtension } from '../constants';
 
-export class GenericExtractorService implements Extractor {
+export class GenericExtractorService implements IExtractor {
     textDecoder = new TextDecoder("utf-8");
 
     isFileOfInterest(fileName: string): boolean {
         return [FileExtension.css, FileExtension.scss, FileExtension.less, FileExtension.sass].some(ext => fileName.endsWith(ext));
     }
 
-    extractClassNames(fileContent: string): Set<FoundCSS> {
-        const classNames = new Set<FoundCSS>();
+    extractClassNames(fileContent: string): Set<DetectedCSSClass> {
+        const classNames = new Set<DetectedCSSClass>();
 
         const root = postcss.parse(fileContent);
         root.walkRules(rule => {
@@ -33,7 +33,7 @@ export class GenericExtractorService implements Extractor {
         return classNames;
     }
 
-    async getUsedClassesInFiles(files: Uri[], classNames: Set<FoundCSS>): Promise<Set<string>> {
+    async getUsedClassesInFiles(files: Uri[], classNames: Set<DetectedCSSClass>): Promise<Set<string>> {
         const usedClassNames = new Set<string>();
 
         for (const potentialFile of files) {
