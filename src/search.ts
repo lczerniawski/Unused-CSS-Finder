@@ -63,13 +63,12 @@ async function findUnusedClassesInCurrentDocument(
 	currentWorkspacePath: string, 
 	extractor: IExtractor,
 	ignoredFiles: Ignore,
-): Promise< DetectedCSSClass[] | null> {
+): Promise<DetectedCSSClass[] | null> {
 	const fileContent = await vscode.workspace.fs.readFile(currentDocument.uri);
 	const textDecoder = new TextDecoder("utf-8");
 	const fileContentString = textDecoder.decode(fileContent);
 
 	const classNames = extractor.extractClassNames(fileContentString); 
-	let usedClassNames = new Set<string>();
 
 	const filesThatCanUseCss = [
 		constants.FileExtension.html,
@@ -86,6 +85,8 @@ async function findUnusedClassesInCurrentDocument(
 	const potentialFilesCloseToCurrentFile = allPotentialFilesThatUseCss.filter(x => {
 		return x.fsPath.includes(currentDocumentDir) && !ignoredFiles.ignores(path.relative(currentWorkspacePath, x.fsPath));
 	});
+
+	const usedClassNames = new Set<string>();
 	const usedClasses = await extractor.getUsedClassesInFiles(potentialFilesCloseToCurrentFile, classNames);
 	usedClasses.forEach(className => usedClassNames.add(className));
 
