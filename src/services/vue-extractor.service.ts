@@ -72,39 +72,39 @@ export class VueExtractorService implements IExtractor {
                 const scriptContent = descriptor.script?.content ?? '';
                 searchableContent = `${templateContent}\n${scriptContent}`;
             }
+            searchableContent = searchableContent.replace(/<!--[\s\S]*?-->/g, '');                
 
             for (const className of classNames) {
                 if (!className.isGlobal && currentDocumentPath !== potentialFile.fsPath){
                     continue;
                 }
 
-
                 const escapedClassName = className.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                
                 // Vue template class attribute patterns
                 const staticClassRegex = new RegExp(`class\\s*=\\s*["'][^"']*\\b${escapedClassName}\\b[^"']*["']`, 'gms');
-                
                 // Vue dynamic class binding patterns
                 const dynamicClassRegex = new RegExp(`:class\\s*=\\s*["'][^"']*\\b${escapedClassName}\\b[^"']*["']`, 'gms');
-                
                 // Vue object-style class binding
                 const objectClassRegex = new RegExp(`["']${escapedClassName}["']\\s*:\\s*(true|[^,}]+)`, 'gms');
-                
                 // Vue array-style class binding
                 const arrayClassRegex = new RegExp(`["']${escapedClassName}["']`, 'gms');
-                
                 // JavaScript/TypeScript usage in script sections
                 const jsClassRegex = new RegExp(`(className|class).*["'].*\\b${escapedClassName}\\b.*["']`, 'gms');
-                
                 // classList.add/remove/toggle/contains usage
                 const classListRegex = new RegExp(`classList\\.(add|remove|toggle|contains)\\s*\\(\\s*["']${escapedClassName}["']\\s*\\)`, 'gms');
+                // Template literals with backticks
+                const templateLiteralRegex = new RegExp(`\`[^\`]*\\b${escapedClassName}\\b[^\`]*\``, 'gms');
+                // String concatenation
+                const concatRegex = new RegExp(`["'\`][^"'\`]*${escapedClassName}[^"'\`]*["'\`]`, 'gms');
 
                 if (staticClassRegex.test(searchableContent) || 
                     dynamicClassRegex.test(searchableContent) ||
                     objectClassRegex.test(searchableContent) ||
                     arrayClassRegex.test(searchableContent) ||
                     jsClassRegex.test(searchableContent) ||
-                    classListRegex.test(searchableContent)) {
+                    classListRegex.test(searchableContent) ||
+                    templateLiteralRegex.test(searchableContent) ||
+                    concatRegex.test(searchableContent)) {
                     usedClassNames.add(className.name);
                 }
             }

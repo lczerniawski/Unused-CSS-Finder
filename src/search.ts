@@ -4,16 +4,10 @@ import ignore, { Ignore } from 'ignore';
 import { existsSync, readFileSync } from 'fs';
 import * as constants from './constants';
 import { TextDecoder } from 'util';
-import { GenericExtractorService } from './services/generic-extractor.service';
-import { VueExtractorService } from './services/vue-extractor.service';
 import { DetectedCSSClass } from './models';
 import { IExtractor } from './services/extractor.interface';
 
-export async function findUnusedClassesAndMark(diagnosticCollection: vscode.DiagnosticCollection) {
-	const standardExtractor = new GenericExtractorService(); // TODO Move to main initialization
-	const vueExtractor = new VueExtractorService();
-	const extractors: IExtractor[] = [standardExtractor, vueExtractor];
-
+export async function findUnusedClassesAndMark(extractors: IExtractor[], diagnosticCollection: vscode.DiagnosticCollection) {
 	const currentDocument = vscode.window.activeTextEditor?.document;
 	if (!currentDocument) {
 		return;
