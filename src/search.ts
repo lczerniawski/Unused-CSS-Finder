@@ -1,167 +1,144 @@
 import path from 'path';
 import * as vscode from 'vscode';
-import ignore from 'ignore';
+import ignore, { Ignore } from 'ignore';
 import { existsSync, readFileSync } from 'fs';
 import * as constants from './constants';
 import { TextDecoder } from 'util';
-import * as postcss from 'postcss';
-import selectorParser from 'postcss-selector-parser';
+import { DetectedCSSClass } from './models';
+import { IExtractor } from './services/extractor.interface';
 
-export async function findUnusedClassesAndMark(diagnosticCollection: vscode.DiagnosticCollection) {
-	const unusedCssClasses = await findUnusedClassesInCurrentFile();
+export async function findUnusedClassesAndMark(extractors: IExtractor[], diagnosticCollection: vscode.DiagnosticCollection) {
+	const currentDocument = vscode.window.activeTextEditor?.document;
+	if (!currentDocument) {
+		return;
+	}
+
+	const extractorToUse = extractors.find(ext => ext.isFileOfInterest(currentDocument.fileName));
+	if(!extractorToUse) {
+		return;
+	}	
+
+	const workspaceMainPaths = vscode.workspace.workspaceFolders;
+	if (!workspaceMainPaths) {
+		return;
+	}
+
+	const currentFileWorkspace = workspaceMainPaths.find(x => currentDocument.uri.fsPath.includes(x.uri.fsPath));
+	if (!currentFileWorkspace) {
+		return;
+	}
+	const currentWorkspacePath = currentFileWorkspace.uri.fsPath;
+
+	const ignoredFiles = initializeIgnoredFiles(currentWorkspacePath);
+	if (ignoredFiles.ignores(path.relative(currentWorkspacePath, currentDocument.uri.fsPath))) {
+		//* If current document is ignored we just return
+		return;
+	}
+
+	const unusedCssClasses = await findUnusedClassesInCurrentDocument(currentDocument, currentWorkspacePath, extractorToUse, ignoredFiles);
 	if (unusedCssClasses) {
 		markUnusedClasses(unusedCssClasses, diagnosticCollection);
 	}
 }
 
-async function findUnusedClassesInCurrentFile(): Promise<Array<string> | null> {
-	const textDecoder = new TextDecoder("utf-8");
-	const workspaceMainPaths = vscode.workspace.workspaceFolders;
-	if (!workspaceMainPaths) {
-		return null;
-	}
-
-	const currentCssDocument = vscode.window.activeTextEditor?.document;
-	const cssExtensions = ['.css', '.scss', '.less', '.sass'];
-	if (!currentCssDocument || !cssExtensions.some(ext => currentCssDocument.fileName.endsWith(ext))) {
-		return null;
-	}
-
-	const currentFileWorkspace = workspaceMainPaths?.find(x => currentCssDocument.uri.fsPath.includes(x.uri.fsPath));
-	if (!currentFileWorkspace) {
-		return null;
-	}
-
+function initializeIgnoredFiles(currentWorkspacePath: string): Ignore {
 	const ig = ignore();
-	const gitignorePath = path.join(currentFileWorkspace.uri.fsPath, '.gitignore');
+	const gitignorePath = path.join(currentWorkspacePath, '.gitignore');
 	if (existsSync(gitignorePath)) {
 		const gitignoreContent = readFileSync(gitignorePath, 'utf8');
 		ig.add(gitignoreContent);
 	}
 
-	if (ig.ignores(path.relative(currentFileWorkspace.uri.fsPath, currentCssDocument.uri.fsPath))) {
-		return null;
-	}
+	return ig;
+}
 
-	const fileContent = await vscode.workspace.fs.readFile(currentCssDocument.uri);
+async function findUnusedClassesInCurrentDocument(
+	currentDocument: vscode.TextDocument, 
+	currentWorkspacePath: string, 
+	extractor: IExtractor,
+	ignoredFiles: Ignore,
+): Promise<DetectedCSSClass[] | null> {
+	const fileContent = await vscode.workspace.fs.readFile(currentDocument.uri);
+	const textDecoder = new TextDecoder("utf-8");
 	const fileContentString = textDecoder.decode(fileContent);
 
-	const classNames = extractClassNames(fileContentString);
-	let usedClassNames = new Set<string>();
+	const classNames = extractor.extractClassNames(fileContentString); 
 
-	const allPotentialFilesThatUseCss = await vscode.workspace.findFiles("**/*.{html,jsx,tsx,js,ts,php}", "**/node_modules/**");
-	const currentCssPath = path.dirname(currentCssDocument.uri.fsPath);
+	const filesThatCanUseCss = [
+		constants.FileExtension.html,
+		constants.FileExtension.js,
+		constants.FileExtension.jsx,
+		constants.FileExtension.php,
+		constants.FileExtension.ts,
+		constants.FileExtension.tsx,
+		constants.FileExtension.vue,
+	];
+	const allPotentialFilesThatUseCss = await vscode.workspace.findFiles(`**/*.{${filesThatCanUseCss.join(',')}}`, "**/node_modules/**");
+	const currentDocumentDir = path.dirname(currentDocument.uri.fsPath);
 
-	const potentialFilesDeepInTree = allPotentialFilesThatUseCss.filter(x => {
-		return x.fsPath.includes(currentCssPath) && !ig.ignores(path.relative(currentFileWorkspace.uri.fsPath, x.fsPath));
+	const potentialFilesCloseToCurrentFile = allPotentialFilesThatUseCss.filter(x => {
+		return x.fsPath.includes(currentDocumentDir) && !ignoredFiles.ignores(path.relative(currentWorkspacePath, x.fsPath));
 	});
-	await checkClassUsageInFiles(potentialFilesDeepInTree, textDecoder, classNames, usedClassNames);
+
+	const usedClassNames = new Set<string>();
+	const usedClasses = await extractor.getUsedClassesInFiles(potentialFilesCloseToCurrentFile, classNames);
+	usedClasses.forEach(className => usedClassNames.add(className));
 
 	const config = vscode.workspace.getConfiguration('unusedCssFinder');
 	const enableFallbackSearch = config.get<boolean>('enableFallbackSearch', true);
 
 	// ! if no files are found near the .css file we go up the tree (and fallback is enabled in settings)
-	if (potentialFilesDeepInTree.length === 0 && enableFallbackSearch) {
-		const relativePath = path.relative(currentFileWorkspace.uri.fsPath, currentCssDocument.uri.fsPath);
+	if (potentialFilesCloseToCurrentFile.length === 0 && enableFallbackSearch) {
+		const relativePath = path.relative(currentWorkspacePath, currentDocument.uri.fsPath);
 		const relativePathSplitted = relativePath.split(path.sep);
 
 		for (let i = relativePathSplitted.length - 3; i >= 0; i--) {
-			const potentialPath = path.join(currentFileWorkspace.uri.fsPath, ...relativePathSplitted.slice(0, i + 1));
+			const potentialPath = path.join(currentWorkspacePath, ...relativePathSplitted.slice(0, i + 1));
 			const potentialFiles = allPotentialFilesThatUseCss.filter(x => {
 				const fileDir = path.dirname(x.fsPath);
-				return fileDir === potentialPath && !ig.ignores(path.relative(currentFileWorkspace.uri.fsPath, x.fsPath));
+				return fileDir === potentialPath && !ignoredFiles.ignores(path.relative(currentWorkspacePath, x.fsPath));
 			});
-			await checkClassUsageInFiles(potentialFiles, textDecoder, classNames, usedClassNames);
+			const usedClasses = await extractor.getUsedClassesInFiles(potentialFiles, classNames);
+			usedClasses.forEach(className => usedClassNames.add(className));
 		}
 
 		// ! Lastly look for files in workspace main folder
 		const potentialFilesInRoot = allPotentialFilesThatUseCss.filter(x => {
 			const fileDir = path.dirname(x.fsPath);
-			return fileDir === currentFileWorkspace.uri.fsPath && !ig.ignores(path.relative(currentFileWorkspace.uri.fsPath, x.fsPath));
+			return fileDir === currentWorkspacePath && !ignoredFiles.ignores(path.relative(currentWorkspacePath, x.fsPath));
 		});
-		await checkClassUsageInFiles(potentialFilesInRoot, textDecoder, classNames, usedClassNames);
+		const usedClasses = await extractor.getUsedClassesInFiles(potentialFilesInRoot, classNames);
+		usedClasses.forEach(className => usedClassNames.add(className));
 	}
 
-	const unusedCssClasses = [...classNames].filter(className => !usedClassNames.has(className));
-	return unusedCssClasses;
+	const unusedCssClasses = [...classNames].filter(className => !usedClassNames.has(className.name));
+	return unusedCssClasses; 
 }
 
-export function extractClassNames(cssContent: string): Set<string> {
-	const classNames = new Set<string>();
-
-	const root = postcss.parse(cssContent);
-	root.walkRules(rule => {
-		selectorParser(selectors => {
-			selectors.walkClasses(classNode => {
-				classNames.add(classNode.value);
-			});
-		}).processSync(rule.selector);
-	});
-
-	return classNames;
-}
-
-export async function checkClassUsageInFiles(potentialFiles: vscode.Uri[], textDecoder: TextDecoder, classNames: Set<string>, usedClassNames: Set<string>) {
-	for (const potentialFile of potentialFiles) {
-		if (classNames.size === usedClassNames.size) {
-			break;
-		}
-
-		const potentialFileContent = await vscode.workspace.fs.readFile(potentialFile);
-		const potentialFileContentString = textDecoder.decode(potentialFileContent);
-
-		for (const className of classNames) {
-			const classAttrRegex = new RegExp(`(className|class|ngClass).*("|').*(\\b${className}\\b).*("|')`, 'g');
-			const classBindingRegex = new RegExp(`\\[class\\.${className}\\]\\s*=`, 'g');
-
-			if (classAttrRegex.test(potentialFileContentString) || classBindingRegex.test(potentialFileContentString)) {
-				usedClassNames.add(className);
-			}
-		}
-	}
-}
-
-function markUnusedClasses(unusedCssClasses: Array<string>, diagnosticCollection: vscode.DiagnosticCollection) {
+function markUnusedClasses(unusedCssClasses: Array<DetectedCSSClass>, diagnosticCollection: vscode.DiagnosticCollection) {
 	const document = vscode.window.activeTextEditor?.document;
 	if (!document) {
 		return;
 	}
 
 	const diagnostics: vscode.Diagnostic[] = [];
-	const css = document.getText();
-	const root = postcss.parse(css);
+	for (const css of unusedCssClasses) {
+		const ruleStartOffset = document.offsetAt(
+			new vscode.Position(css.cssClassStartOffset[0], css.cssClassStartOffset[1])
+		);
+		const ruleEndOffset = document.offsetAt(
+			new vscode.Position(css.cssClassEndOffset[0], css.cssClassEndOffset[1])
+		);
 
-	root.walkRules(rule => {
-		const selector = rule.selector;
-		let hasUnusedClass = false;
+		const startPos = document.positionAt(ruleStartOffset);
+		const endPos = document.positionAt(ruleEndOffset);
 
-		selectorParser(selectors => {
-			selectors.walkClasses(classNode => {
-				const className = classNode.value;
-				if (unusedCssClasses.includes(className)) {
-					hasUnusedClass = true;
-				}
-			});
-		}).processSync(selector);
-
-		if (hasUnusedClass) {
-			const ruleStartOffset = document.offsetAt(
-				new vscode.Position(rule.source!.start!.line - 1, rule.source!.start!.column - 1)
-			);
-			const ruleEndOffset = document.offsetAt(
-				new vscode.Position(rule.source!.end!.line - 1, rule.source!.end!.column - 1)
-			);
-
-			const startPos = document.positionAt(ruleStartOffset);
-			const endPos = document.positionAt(ruleEndOffset);
-
-			const range = new vscode.Range(startPos, endPos);
-			const diagnostic = new vscode.Diagnostic(range, 'Potentially unused class', vscode.DiagnosticSeverity.Warning);
-			diagnostic.source = "css";
-			diagnostic.code = constants.DiagnosticCode;
-			diagnostics.push(diagnostic);
-		}
-	});
+		const range = new vscode.Range(startPos, endPos);
+		const diagnostic = new vscode.Diagnostic(range, 'Potentially unused class', vscode.DiagnosticSeverity.Warning);
+		diagnostic.source = "css";
+		diagnostic.code = constants.DiagnosticCode;
+		diagnostics.push(diagnostic);
+	}
 
 	diagnosticCollection.set(document.uri, diagnostics);
 }

@@ -2,17 +2,24 @@ import * as vscode from 'vscode';
 import * as constants from './constants';
 import { UnusedCssCodeActionProvider } from './unused-css-code-action.provider';
 import { findUnusedClassesAndMark } from './search';
+import { GenericExtractorService } from './services/generic-extractor.service';
+import { VueExtractorService } from './services/vue-extractor.service';
+import { IExtractor } from './services/extractor.interface';
 
 let diagnosticCollection: vscode.DiagnosticCollection;
 
 export async function activate(context: vscode.ExtensionContext) {
+	const standardExtractor = new GenericExtractorService(); 
+	const vueExtractor = new VueExtractorService();
+	const extractors: IExtractor[] = [standardExtractor, vueExtractor];
+
 	diagnosticCollection = vscode.languages.createDiagnosticCollection(constants.DiagnosticCode);
 	context.subscriptions.push(diagnosticCollection);
 
-	const onDidOpenTextDocument = vscode.workspace.onDidOpenTextDocument(async () => await findUnusedClassesAndMark(diagnosticCollection));
+	const onDidOpenTextDocument = vscode.workspace.onDidOpenTextDocument(async () => await findUnusedClassesAndMark(extractors, diagnosticCollection));
 	context.subscriptions.push(onDidOpenTextDocument);
 
-	const onDidChangeTextDocument = vscode.workspace.onDidChangeTextDocument(async () => await findUnusedClassesAndMark(diagnosticCollection));
+	const onDidChangeTextDocument = vscode.workspace.onDidChangeTextDocument(async () => await findUnusedClassesAndMark(extractors, diagnosticCollection));
 	context.subscriptions.push(onDidChangeTextDocument);
 
 	const quickFixAction = vscode.languages.registerCodeActionsProvider('css', new UnusedCssCodeActionProvider(), {
@@ -20,7 +27,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(quickFixAction);
 
-	await findUnusedClassesAndMark(diagnosticCollection);
+	await findUnusedClassesAndMark(extractors, diagnosticCollection);
 }
 
 export function deactivate() { 
