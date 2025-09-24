@@ -4,7 +4,7 @@ const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
 
 // List of optional dependencies from @vue/compiler-sfc that we can safely ignore.
-const problematicDeps = [
+const unnecessaryVueCompilerDependencies = [
     'velocityjs', 'dustjs-linkedin', 'atpl', 'liquor', 'twig', 'ejs',
     'eco', 'jazz', 'jqtpl', 'hamljs', 'hamlet', 'whiskers', 'haml-coffee',
     'hogan.js', 'templayed', 'handlebars', 'underscore', 'lodash', 'walrus',
@@ -46,7 +46,7 @@ async function main() {
 		sourcesContent: false,
 		platform: 'node',
 		outfile: 'dist/extension.js',
-		external: ['vscode', ...problematicDeps],
+		external: ['vscode', ...unnecessaryVueCompilerDependencies],
 		logLevel: 'silent',
 		plugins: [
 			/* add to the end of plugins array */
