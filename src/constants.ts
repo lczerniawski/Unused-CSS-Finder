@@ -11,5 +11,6 @@ export enum FileExtension {
 	less = 'less',
 	sass = 'sass',
 	scss = 'scss',
-	vue = 'vue'
+	vue = 'vue',
+	twig = 'twig'
 }

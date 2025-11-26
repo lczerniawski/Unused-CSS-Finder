@@ -72,6 +72,7 @@ async function findUnusedClassesInCurrentDocument(
 		constants.FileExtension.ts,
 		constants.FileExtension.tsx,
 		constants.FileExtension.vue,
+		constants.FileExtension.twig,
 	];
 	const allPotentialFilesThatUseCss = await vscode.workspace.findFiles(`**/*.{${filesThatCanUseCss.join(',')}}`, "**/node_modules/**");
 	const currentDocumentDir = path.dirname(currentDocument.uri.fsPath);

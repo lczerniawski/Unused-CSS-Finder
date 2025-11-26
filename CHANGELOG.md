@@ -1,5 +1,8 @@
 # Change Log
 
+## [2.1.0] - 2025-09-24
+- Add Twig files support
+
 ## [2.0.0] - 2025-09-24
 - Refactor parsing mechanism so it is easy to extend it with new parsers for specific formats (React, Svelte, etc) in the future
 - Add support for Vue files syntax by [@nkalait](https://github.com/nkalait)
