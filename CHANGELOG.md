@@ -1,5 +1,8 @@
 # Change Log
 
+## [2.1.1] - 2026-03-11
+- Update vulnerable packages
+
 ## [2.1.0] - 2025-09-24
 - Add Twig files support
 
