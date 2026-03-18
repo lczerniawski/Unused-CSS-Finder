@@ -1,5 +1,9 @@
 # Change Log
 
+
+## [2.1.2] - 2026-03-18
+- Fix vulnerable packages
+
 ## [2.1.1] - 2026-03-11
 - Update vulnerable packages
 
