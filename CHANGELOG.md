@@ -1,6 +1,11 @@
 # Change Log
 
 
+## [2.2.0] - 2026-04-07
+- Add CSS Modules support - detect classes imported as `classes.className` or `styles.className`
+- Add classList API support - detect `classList.add()`, `classList.remove()`, `classList.toggle()`, and `classList.contains()` usage
+- Improve class usage detection in JSX with CSS Module patterns
+
 ## [2.1.2] - 2026-03-18
 - Fix vulnerable packages
 

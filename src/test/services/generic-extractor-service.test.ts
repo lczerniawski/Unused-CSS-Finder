@@ -326,4 +326,97 @@ suite('Generic Extractor Service', () => {
         const result = Array.from(genericExtractorService.extractClassNames(css));
         assert.strictEqual(result.length, 0);
     });
+
+    test('getUsedClassesInFiles detects CSS Module pattern: classes.container', async () => {
+        const classNames = new Set<DetectedCSSClass>([
+            { name: 'container', cssClassStartOffset: [0, 0], cssClassEndOffset: [0, 9], isGlobal: true },
+            { name: 'unused', cssClassStartOffset: [0, 0], cssClassEndOffset: [0, 6], isGlobal: true }
+        ]);
+
+        const fileUri = vscode.Uri.file('/fake/path/component.js');
+        const fileContentsMap = new Map<string, string>([
+            [fileUri.fsPath, `import classes from './styles.module.css';\nconst div = <div className={classes.container}></div>;`]
+        ]);
+
+        const originalFs = vscode.workspace.fs;
+        Object.defineProperty(vscode.workspace, 'fs', {
+            value: {
+                readFile: (uri: vscode.Uri) => {
+                    const content = fileContentsMap.get(uri.fsPath) ?? '';
+                    return Promise.resolve(Buffer.from(content));
+                }
+            },
+            configurable: true
+        });
+
+        try {
+            const usedClassNames = await genericExtractorService.getUsedClassesInFiles([fileUri], classNames);
+            assert.ok(usedClassNames.has('container'));
+            assert.ok(!usedClassNames.has('unused'));
+        } finally {
+            Object.defineProperty(vscode.workspace, 'fs', { value: originalFs, configurable: true });
+        }
+    });
+
+    test('getUsedClassesInFiles detects CSS Module with different variable names', async () => {
+        const classNames = new Set<DetectedCSSClass>([
+            { name: 'myClass', cssClassStartOffset: [0, 0], cssClassEndOffset: [0, 7], isGlobal: true },
+            { name: 'button', cssClassStartOffset: [0, 0], cssClassEndOffset: [0, 6], isGlobal: true }
+        ]);
+
+        const fileUri = vscode.Uri.file('/fake/path/component.tsx');
+        const fileContentsMap = new Map<string, string>([
+            [fileUri.fsPath, `import styles from './component.module.scss';\nimport css from './other.module.css';\n<div className={styles.myClass}>\n<button className={css.button} />\n</div>`]
+        ]);
+
+        const originalFs = vscode.workspace.fs;
+        Object.defineProperty(vscode.workspace, 'fs', {
+            value: {
+                readFile: (uri: vscode.Uri) => {
+                    const content = fileContentsMap.get(uri.fsPath) ?? '';
+                    return Promise.resolve(Buffer.from(content));
+                }
+            },
+            configurable: true
+        });
+
+        try {
+            const usedClassNames = await genericExtractorService.getUsedClassesInFiles([fileUri], classNames);
+            assert.ok(usedClassNames.has('myClass'));
+            assert.ok(usedClassNames.has('button'));
+        } finally {
+            Object.defineProperty(vscode.workspace, 'fs', { value: originalFs, configurable: true });
+        }
+    });
+
+    test('getUsedClassesInFiles detects classList API usage', async () => {
+        const classNames = new Set<DetectedCSSClass>([
+            { name: 'active', cssClassStartOffset: [0, 0], cssClassEndOffset: [0, 6], isGlobal: true },
+            { name: 'hidden', cssClassStartOffset: [0, 0], cssClassEndOffset: [0, 6], isGlobal: true }
+        ]);
+
+        const fileUri = vscode.Uri.file('/fake/path/script.js');
+        const fileContentsMap = new Map<string, string>([
+            [fileUri.fsPath, `element.classList.add('active');\nelement.classList.toggle('hidden');\nelement.classList.remove('unused');`]
+        ]);
+
+        const originalFs = vscode.workspace.fs;
+        Object.defineProperty(vscode.workspace, 'fs', {
+            value: {
+                readFile: (uri: vscode.Uri) => {
+                    const content = fileContentsMap.get(uri.fsPath) ?? '';
+                    return Promise.resolve(Buffer.from(content));
+                }
+            },
+            configurable: true
+        });
+
+        try {
+            const usedClassNames = await genericExtractorService.getUsedClassesInFiles([fileUri], classNames);
+            assert.ok(usedClassNames.has('active'));
+            assert.ok(usedClassNames.has('hidden'));
+        } finally {
+            Object.defineProperty(vscode.workspace, 'fs', { value: originalFs, configurable: true });
+        }
+    });
 });

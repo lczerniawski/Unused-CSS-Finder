@@ -62,6 +62,7 @@ export class GenericExtractorService implements IExtractor {
         const name = this.escapeRegExp(className);
         const contentWithoutComments = content.replace(/<!--[\s\S]*?-->/g, '');
 
+        // Standard class attribute (HTML/JSX): class="container" or className="container"
         const classAttrCapture = /(class(Name)?)\s*=\s*(['"])(.*?)\3/gs;
         let m;
         while ((m = classAttrCapture.exec(contentWithoutComments)) !== null) {
@@ -70,15 +71,30 @@ export class GenericExtractorService implements IExtractor {
             if (tokenRe.test(attrValue)) { return true; }
         }
 
+        // Vue class binding: [class.container]=
         const classBindingRegex = new RegExp(`\\[class\\.${name}\\]\\s*=`, 'g');
         if (classBindingRegex.test(contentWithoutComments)) { return true; }
 
+        // Angular ngClass binding: [ngClass]="..."
         const ngClassRegex = /\[ngClass\]\s*=\s*(['"])(.*?)\1/gs;
         while ((m = ngClassRegex.exec(contentWithoutComments)) !== null) {
             const ngClassValue = m[2];
             const tokenRe = new RegExp(`(^|[^\\w-])${name}($|[^\\w-])`);
             if (tokenRe.test(ngClassValue)) { return true; }
         }
+
+        // CSS Module pattern: classes.container, styles.myClass, etc.
+        // Matches: variableName.className (where variableName could be 'classes', 'styles', 'css', etc.)
+        const cssModuleRegex = new RegExp(`[\\w$]+\\.${name}(?![\\w-])`, 'g');
+        if (cssModuleRegex.test(contentWithoutComments)) { return true; }
+
+        // CSS Module in JSX className: className={classes.container}
+        const jsxCssModuleRegex = new RegExp(`className\\s*=\\s*\\{[^}]*\\b${name}\\b[^}]*\\}`, 'gs');
+        if (jsxCssModuleRegex.test(contentWithoutComments)) { return true; }
+
+        // classList API: element.classList.add/remove/toggle('className')
+        const classListRegex = new RegExp(`classList\\.(add|remove|toggle|contains)\\s*\\(\\s*['"]${name}['"]`, 'g');
+        if (classListRegex.test(contentWithoutComments)) { return true; }
 
         return false;
     }
