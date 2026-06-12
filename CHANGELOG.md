@@ -1,5 +1,7 @@
 # Change Log
 
+## [2.2.1] - 2026-06-12
+- Fix vulnerable packages
 
 ## [2.2.0] - 2026-04-07
 - Add CSS Modules support - detect classes imported as `classes.className` or `styles.className`
