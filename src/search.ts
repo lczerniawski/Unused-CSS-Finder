@@ -16,7 +16,7 @@ export async function findUnusedClassesAndMark(extractors: IExtractor[], diagnos
 	const extractorToUse = extractors.find(ext => ext.isFileOfInterest(currentDocument.fileName));
 	if(!extractorToUse) {
 		return;
-	}	
+	}
 
 	const workspaceMainPaths = vscode.workspace.workspaceFolders;
 	if (!workspaceMainPaths) {
@@ -53,8 +53,8 @@ function initializeIgnoredFiles(currentWorkspacePath: string): Ignore {
 }
 
 async function findUnusedClassesInCurrentDocument(
-	currentDocument: vscode.TextDocument, 
-	currentWorkspacePath: string, 
+	currentDocument: vscode.TextDocument,
+	currentWorkspacePath: string,
 	extractor: IExtractor,
 	ignoredFiles: Ignore,
 ): Promise<DetectedCSSClass[] | null> {
@@ -62,7 +62,7 @@ async function findUnusedClassesInCurrentDocument(
 	const textDecoder = new TextDecoder("utf-8");
 	const fileContentString = textDecoder.decode(fileContent);
 
-	const classNames = extractor.extractClassNames(fileContentString); 
+	const classNames = extractor.extractClassNames(fileContentString);
 
 	const filesThatCanUseCss = [
 		constants.FileExtension.html,
@@ -87,33 +87,56 @@ async function findUnusedClassesInCurrentDocument(
 
 	const config = vscode.workspace.getConfiguration('unusedCssFinder');
 	const enableFallbackSearch = config.get<boolean>('enableFallbackSearch', true);
+	const includeChildDirectories = config.get<boolean>('includeChildDirectories', false);
+	const additionalSearchPaths = config.get<string[]>('additionalSearchPaths', []);
+
+	// ! Check additional search paths first
+	if (additionalSearchPaths.length > 0) {
+		for (const searchPath of additionalSearchPaths) {
+			const absoluteSearchPath = path.join(currentWorkspacePath, searchPath);
+			const potentialFiles = allPotentialFilesThatUseCss.filter(x => {
+				return x.fsPath.startsWith(absoluteSearchPath) && !ignoredFiles.ignores(path.relative(currentWorkspacePath, x.fsPath));
+			});
+			const usedClasses = await extractor.getUsedClassesInFiles(potentialFiles, classNames);
+			usedClasses.forEach(className => usedClassNames.add(className));
+		}
+	}
 
 	// ! if no files are found near the .css file we go up the tree (and fallback is enabled in settings)
 	if (potentialFilesCloseToCurrentFile.length === 0 && enableFallbackSearch) {
 		const relativePath = path.relative(currentWorkspacePath, currentDocument.uri.fsPath);
 		const relativePathSplitted = relativePath.split(path.sep);
 
-		for (let i = relativePathSplitted.length - 3; i >= 0; i--) {
-			const potentialPath = path.join(currentWorkspacePath, ...relativePathSplitted.slice(0, i + 1));
-			const potentialFiles = allPotentialFilesThatUseCss.filter(x => {
-				const fileDir = path.dirname(x.fsPath);
-				return fileDir === potentialPath && !ignoredFiles.ignores(path.relative(currentWorkspacePath, x.fsPath));
-			});
-			const usedClasses = await extractor.getUsedClassesInFiles(potentialFiles, classNames);
-			usedClasses.forEach(className => usedClassNames.add(className));
+		// Start from the parent of the CSS file directory and work up to the root
+		// relativePathSplitted.length - 2 ensures we start from the parent folder
+		const startIndex = Math.max(0, relativePathSplitted.length - 2);
+		
+		for (let i = startIndex; i >= 0; i--) {
+			const potentialPath = i === 0 ? currentWorkspacePath : path.join(currentWorkspacePath, ...relativePathSplitted.slice(0, i));
+			
+			if (includeChildDirectories) {
+				// Search in the parent directory AND all its children (recursively)
+				const potentialFiles = allPotentialFilesThatUseCss.filter(x => {
+					// Include files that start with the parent path (children) OR are directly in it
+					const isInParentOrChildren = x.fsPath.startsWith(potentialPath + path.sep) || path.dirname(x.fsPath) === potentialPath;
+					return isInParentOrChildren && !ignoredFiles.ignores(path.relative(currentWorkspacePath, x.fsPath));
+				});
+				const usedClasses = await extractor.getUsedClassesInFiles(potentialFiles, classNames);
+				usedClasses.forEach(className => usedClassNames.add(className));
+			} else {
+				// Only search directly in the parent directory (original behavior)
+				const potentialFiles = allPotentialFilesThatUseCss.filter(x => {
+					const fileDir = path.dirname(x.fsPath);
+					return fileDir === potentialPath && !ignoredFiles.ignores(path.relative(currentWorkspacePath, x.fsPath));
+				});
+				const usedClasses = await extractor.getUsedClassesInFiles(potentialFiles, classNames);
+				usedClasses.forEach(className => usedClassNames.add(className));
+			}
 		}
-
-		// ! Lastly look for files in workspace main folder
-		const potentialFilesInRoot = allPotentialFilesThatUseCss.filter(x => {
-			const fileDir = path.dirname(x.fsPath);
-			return fileDir === currentWorkspacePath && !ignoredFiles.ignores(path.relative(currentWorkspacePath, x.fsPath));
-		});
-		const usedClasses = await extractor.getUsedClassesInFiles(potentialFilesInRoot, classNames);
-		usedClasses.forEach(className => usedClassNames.add(className));
 	}
 
 	const unusedCssClasses = [...classNames].filter(className => !usedClassNames.has(className.name));
-	return unusedCssClasses; 
+	return unusedCssClasses;
 }
 
 function markUnusedClasses(unusedCssClasses: Array<DetectedCSSClass>, diagnosticCollection: vscode.DiagnosticCollection) {

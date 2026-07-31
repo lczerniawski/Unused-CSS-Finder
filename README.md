@@ -8,6 +8,8 @@ Unused CSS Finder is a Visual Studio Code extension that helps you identify and 
 - **Problem Marking**: Identifies unused CSS classes and marks them as problems in VS Code.
 - **Supports Various File Types**: Works with `.css`, `.scss`, `.less`, and `.sass` files.
 - **Configurable Fallback Search**: Option to enable/disable fallback search mechanism when no files are found near the CSS file.
+- **Child Directory Search**: Option to include child/sibling directories when performing fallback search.
+- **Custom Search Paths**: Specify additional directories to always search for CSS usage.
 
 ## Screenshots
 
@@ -17,9 +19,10 @@ Unused CSS Finder is a Visual Studio Code extension that helps you identify and 
 ## How It Works
 
 1. **Scanning for Relevant Files**: The extension looks for files that are in the same folder as currently opened CSS file.
-2. **Fallback to Parent Directories**: If no files are found, it searches parent directories up the tree.
-2. **Analyzing Usage**: Parses these files to determine which CSS classes are unused.
-3. **Marking Unused CSS**: Highlights unused CSS in the editor and lists them in the Problems panel.
+2. **Fallback to Parent Directories**: If no files are found, it searches parent directories up the tree (optionally including their child directories).
+3. **Custom Search Paths**: Optionally searches additional specified directories for CSS usage.
+4. **Analyzing Usage**: Parses these files to determine which CSS classes are unused.
+5. **Marking Unused CSS**: Highlights unused CSS in the editor and lists them in the Problems panel.
 
 ## Configuration
 
@@ -30,15 +33,44 @@ The extension provides the following configuration options:
 - **Default**: `true`
 - **Description**: Enable fallback search mechanism when no files are found near the CSS file. When enabled, the extension will search parent directories if no relevant files are found in the same directory as the CSS file.
 
-To configure this setting:
+### `unusedCssFinder.includeChildDirectories`
+- **Type**: `boolean`
+- **Default**: `false`
+- **Description**: When fallback search is enabled, also search in child directories of parent folders. This is useful when you have a structure like:
+  ```
+  parent/
+    css/
+      styles.css (current file)
+    include/
+      page.php (will be searched when this option is enabled)
+    assets/
+      script.js (will be searched when this option is enabled)
+  ```
+
+### `unusedCssFinder.additionalSearchPaths`
+- **Type**: `array` of strings
+- **Default**: `[]`
+- **Description**: Additional relative paths (from workspace root) to always search for files that use CSS classes. Useful when you have specific directories that should always be checked regardless of the CSS file location.
+- **Example**:
+  ```json
+  {
+    "unusedCssFinder.additionalSearchPaths": ["include", "templates", "src/components"]
+  }
+  ```
+
+### Example Configuration
+
+To configure these settings:
 1. Open VS Code settings (Cmd/Ctrl + ,)
 2. Search for "Unused CSS Finder"
-3. Toggle the "Enable Fallback Search" option
+3. Adjust the options as needed
 
-Alternatively, add this to your `settings.json`:
+Or add them to your `settings.json`:
 ```json
 {
-  "unusedCssFinder.enableFallbackSearch": false
+  "unusedCssFinder.enableFallbackSearch": true,
+  "unusedCssFinder.includeChildDirectories": true,
+  "unusedCssFinder.additionalSearchPaths": ["include", "templates"]
 }
 ```
 

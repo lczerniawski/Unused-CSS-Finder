@@ -1,5 +1,10 @@
 # Change Log
 
+## [2.3.0] - 2026-07-31
+- Add `includeChildDirectories` option to search child/sibling directories during fallback search
+- Add `additionalSearchPaths` option to specify custom directories to always search for CSS usage
+- Addresses issue #12: support for searching in child directories like `include/` when CSS is in `css/` folder
+
 ## [2.2.3] - 2026-07-28
 - Fix vulnerable packages
 
