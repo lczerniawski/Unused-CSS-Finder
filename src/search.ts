@@ -7,12 +7,7 @@ import { TextDecoder } from 'util';
 import { DetectedCSSClass } from './models';
 import { IExtractor } from './services/extractor.interface';
 
-export async function findUnusedClassesAndMark(extractors: IExtractor[], diagnosticCollection: vscode.DiagnosticCollection) {
-	const currentDocument = vscode.window.activeTextEditor?.document;
-	if (!currentDocument) {
-		return;
-	}
-
+export async function findUnusedClassesAndMark(currentDocument: vscode.TextDocument, extractors: IExtractor[], diagnosticCollection: vscode.DiagnosticCollection) {
 	const extractorToUse = extractors.find(ext => ext.isFileOfInterest(currentDocument.fileName));
 	if(!extractorToUse) {
 		return;

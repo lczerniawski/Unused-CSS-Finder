@@ -1,5 +1,9 @@
 # Change Log
 
+## [2.3.1] - 2026-08-28
+- Fix CSS marking not being triggered on the opening of new file.
+- Add CSS marking being triggered when switching between tabs.
+
 ## [2.3.0] - 2026-07-31
 - Add `includeChildDirectories` option to search child/sibling directories during fallback search
 - Add `additionalSearchPaths` option to specify custom directories to always search for CSS usage
