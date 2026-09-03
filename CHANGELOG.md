@@ -1,5 +1,8 @@
 # Change Log
 
+## [2.3.2] - 2026-09-03
+- Fix vulnerable packages
+
 ## [2.3.1] - 2026-08-28
 - Fix CSS marking not being triggered on the opening of new file.
 - Add CSS marking being triggered when switching between tabs.
